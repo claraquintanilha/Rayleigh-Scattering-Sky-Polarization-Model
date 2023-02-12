@@ -361,6 +361,7 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
 
     fig.tight_layout(pad=1.0)
     plt.savefig(op, dpi=opdpi)
+    plt.close()
     
     return 0
 
@@ -396,8 +397,8 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
     '''
     
     # Create the name of the output graphics file
-    op = 'tau_%.2f_A_%.2f_el_%05.2f_az_%06.2f.%s' \
-        % (tau, albedo, el, az, opfiletype)
+    op = 'tau_%.2f_A_%.2f_az_%06.2f_el_%05.2f.%s' \
+        % (tau, albedo, az, el, opfiletype)
     print('Output graphics file:',op)
 
 
@@ -432,6 +433,7 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
 
     fig.tight_layout(pad=1.0)
     plt.savefig(op, dpi=opdpi)
+    plt.close()
     
     return 0
 
