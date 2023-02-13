@@ -201,7 +201,7 @@ def ReadTableLoadRefinedGrid (my_tau, my_alb, nRefine, points_list):
 #######################################################################
 
 #######################################################################
-def make_skymap_dolp (el, az, tau, albedo, npts):
+def make_skymap_dolp (el, az, tau, albedo, npts, opfilename="None"):
     '''
     Given the elevation and azimuth of the Sun/Moon, along with the mesh
     refinement parameter npts, creates a map of the DoLP distributions on the
@@ -216,6 +216,8 @@ def make_skymap_dolp (el, az, tau, albedo, npts):
     albedo : ground albedo. Has to be one of [0, 0.25, 0.8]
     npts : Refine the grid such that each the azimuth grid and the elevation
            grid has npts points.
+           
+    opfilename : if supplied, then use this as the output filename.
 
     Returns
     -------
@@ -251,8 +253,12 @@ def make_skymap_dolp (el, az, tau, albedo, npts):
     # Visualize results
     my_filetype = "png"
     my_dpi = 150
-    skymap_dolp(tau, albedo, az, el, phiNew, muNew,
-                           DoLP, my_filetype, my_dpi)
+    if opfilename == "None" :
+        skymap_dolp(tau, albedo, az, el, phiNew, muNew,
+                    DoLP, my_filetype, my_dpi)
+    else :
+        skymap_dolp(tau, albedo, az, el, phiNew, muNew,
+                    DoLP, my_filetype, my_dpi, opfilename=opfilename)
 
 #######################################################################
 
@@ -367,7 +373,7 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
 
 # Skymap of DoLPs given azimuth and altitude of light source
 def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
-                         opfiletype, opdpi):
+                         opfiletype, opdpi, opfilename="None"):
     '''
     Produces a detailed visualization showing I/Q/U/DoLP etc.
     
@@ -390,6 +396,8 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
     opfiletype : output file type (png/pdf/jpg)
     
     opdpi : DPI of output file
+    
+    opfilename : if supplied, then use this as the output filename.
 
     Returns
     -------
@@ -397,8 +405,12 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
     '''
     
     # Create the name of the output graphics file
-    op = 'tau_%.2f_A_%.2f_az_%06.2f_el_%05.2f.%s' \
-        % (tau, albedo, az, el, opfiletype)
+    if opfilename == "None" :
+        op = 'tau_%.2f_A_%.2f_az_%06.2f_el_%05.2f.%s' \
+            % (tau, albedo, az, el, opfiletype)
+    else :
+        op = '%s.%s' % (opfilename, opfiletype)
+        
     print('Output graphics file:',op)
 
 
