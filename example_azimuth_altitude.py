@@ -10,6 +10,6 @@ my_tau = 0.15
 my_alb = 0.25
 
 # Azimuth and elevation in degrees
-my_az, my_el = 140, 40
+my_az, my_el = 40, 10
 
-nt.make_skymap_dolp(my_el, my_az, my_tau, my_alb, 399)
+nt.make_skymap_dolp(my_el, my_az, my_tau, my_alb, 299)

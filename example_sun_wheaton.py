@@ -43,13 +43,9 @@ my_tau, my_alb = 0.15, 0.25
 # Define the observer at Wheaton College Observatory (WCO)
 wco = EarthLocation(lat=41.9656*u.deg, lon=-71.1836*u.deg, height=40*u.m)
 
-# Select the day. Choose one of the two days below, and the 
-# corresponding UTC offset. Comment out the other day and utcoffset.
-#myday = Time('2023-06-21 00:00:00')
-#utcoffset = -4 * u.hour  # EDT during summer
-
-myday = Time('2023-12-21 00:00:00')
-utcoffset = -5 * u.hour  # EST during winter
+# Select the day.
+myday = Time('2023-03-21 00:00:00')
+utcoffset = -4 * u.hour  # EDT=UTC-4 during summer
 
 
 # Set up the array of times for computing solar positions and 
@@ -64,11 +60,10 @@ opfilenames = my_loc_times.strftime('%Y-%m-%d-%H-%M-%S')
 
 
 # Set up the AltAz coordinate frame for the above time array
-frameJun21 = AltAz(obstime = my_utc_times, location = wco)
-
+AltAzFrame = AltAz(obstime = my_utc_times, location = wco)
 
 # Compute AltAz of Sun at these times
-sunAltAz = get_sun(my_utc_times).transform_to(frameJun21)
+sunAltAz = get_sun(my_utc_times).transform_to(AltAzFrame)
 
 
 # Filter arrays to keep quantities only when the zenith distance (ZD) to 

@@ -5,13 +5,13 @@ import numpy as np
 import natraj_table_utils as nt  # Import stuff from natraj_table_utils.py
 
 # Input tau (my_tau) has to be one of [0.02, 0.05, 0.1, 0.15, 0.25, 0.5, 1]
-my_tau = 0.15
+my_tau = 0.1
 
 # Input albedo (my_alb) has to be one of 0, 0.25, 0.8
 my_alb = 0.25
 
-# Input mu0 (my_mu0) has to be one of [0.1, 0.2, 0.4, 0.6, 0.8, 0.92, 1] 
-my_mu0 = 0.4
+# Input mu0 (my_mu0) has to be within 0.1 <= my_mu0 <= 1 
+my_mu0 = np.cos (np.deg2rad(26))
 
 # Regrid the mu and phi grids so that each have nNew grid points
 nNew = 299
@@ -34,6 +34,7 @@ I = Ivals.reshape(nNew, nNew)
 Q = Qvals.reshape(nNew, nNew)
 U = Uvals.reshape(nNew, nNew)
 DoLP = DoLPvals.reshape(nNew, nNew)
+
 
 # Visualize results
 my_filetype = "png"

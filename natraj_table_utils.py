@@ -55,7 +55,6 @@ tbl_url = 'https://web.gps.caltech.edu/~vijay/Rayleigh_Scattering_Tables/CDS/'
 #######################################################################
 
 
-
 #######################################################################
 # Given tau, this function checks which data table files we need, and
 # downloads them if they are not in the current working directory.
@@ -200,6 +199,93 @@ def ReadTableLoadRefinedGrid (my_tau, my_alb, nRefine, points_list):
     return Ilist, Qlist, Ulist, DoLPs
 #######################################################################
 
+
+#######################################################################
+def locate_neutral_points (mu0, muArr, DoLP):
+    '''
+    Search for neutral points (NP) in the sky.
+    NOTE: Erroneous results for ZD~<25 deg, i.e. mu>0.9? Return that
+    no neutral points founds if mu>0.1 !!!
+
+    Parameters
+    ----------
+    mu0 : TYPE: float.
+        DESCRIPTION: cos(zenith distance) to Sun/Moon.
+    muArr : TYPE: 1-D float array. 
+        DESCRIPTION: mu values of observing directions.
+    DoLP : TYPE: 2-D float array.
+        DESCRIPTION: DOLP values on the sky for given mu0.
+
+    Returns
+    -------
+    A 1-D array with 3 elements. The first element is the zenith distance 
+    to the Arago NP, the Babinet NP is the second element of the 
+    array, and the Brewster NP the third element of the array.
+    The units are in degrees.
+    Zenith distances in the antisolar meridian (opposite side of the
+    meridian as the Sun) have negative values
+    Missing NPs are assigned a physically implausible zenith 
+    distance value of -999.
+    '''
+    
+    zd_np = np.full(3,-999, dtype=float)   # Array to store NPs.
+    
+    if mu0 > 0.9:       # See NOTE above
+        print('Source too close to zenith. No good neutral points.')
+        return zd_np
+    
+    zdsun = np.rad2deg( np.arccos(mu0) )
+    zdArr = np.rad2deg( np.arccos(muArr) )
+    meridian_solar = DoLP[:,0]
+    meridian_antisolar = DoLP[:,-1]
+
+    # Search for a NP in the antisolar meridian direction
+    minLoc = np.argmin(meridian_antisolar)
+
+    if minLoc > 0 and minLoc < len(meridian_antisolar) - 1:
+        zd_min_as = -zdArr[minLoc]
+        if zdsun - zd_min_as > 90:
+            ptName = "Arago"
+            degAboveAntisun = 180 - zdsun + zd_min_as
+            print('Found',ptName,'point',degAboveAntisun,
+                    'deg above antisun.')
+            zd_np[0] = zd_min_as
+        else:
+            ptName = "Babinet"
+            degAboveSun = zdsun - zd_min_as
+            print('Found',ptName,'point',degAboveSun,
+                    'deg above Sun.')
+            zd_np[1] = zd_min_as
+
+    # Search for Babinet and Brewster points in the solar meridian direction
+    idBelowSun = np.searchsorted(muArr, mu0)
+
+    belowSun = meridian_solar[:idBelowSun]
+    zdBelowSunArr = zdArr[:idBelowSun]
+    minLoc = np.argmin(belowSun)
+    if minLoc > 0 and minLoc < len(belowSun) - 1:
+        zdMin = zdBelowSunArr[minLoc]
+        ptName = "Brewster"
+        degBelowSun = zdMin - zdsun
+        print('Found',ptName,'point',degBelowSun,
+                'deg below Sun.')
+        zd_np[2] = zdMin
+
+    aboveSun = meridian_solar[idBelowSun:]
+    zdAboveSunArr = zdArr[idBelowSun:]
+    minLoc = np.argmin(aboveSun)
+    if minLoc > 0 and minLoc < len(aboveSun) - 1:
+        zdMin = zdAboveSunArr[minLoc]
+        ptName = "Babinet"
+        degAboveSun = zdsun - zdMin
+        print('Found',ptName,'point',degAboveSun,
+                'deg above Sun.')
+        zd_np[1] = zdMin
+
+    return zd_np
+#######################################################################
+
+
 #######################################################################
 def make_skymap_dolp (el, az, tau, albedo, npts, opfilename="None"):
     '''
@@ -259,8 +345,8 @@ def make_skymap_dolp (el, az, tau, albedo, npts, opfilename="None"):
     else :
         skymap_dolp(tau, albedo, az, el, phiNew, muNew,
                     DoLP, my_filetype, my_dpi, opfilename=opfilename)
-
 #######################################################################
+
 
 
 #######################################################################
@@ -301,37 +387,50 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
 
     X, Y = np.meshgrid(phiArr, muArr)
 
+    zdsun = np.rad2deg( np.arccos(mu0) )
+    zdArr = np.rad2deg( np.arccos(muArr) )
+    meridian_solar = DoLP[:,0]
+    meridian_antisolar = DoLP[:,-1]
+    
+    # Get locations of neutral points
+    neutral_pts = locate_neutral_points (mu0, muArr, DoLP)
+    zd_nps = neutral_pts[neutral_pts > -999] # Select only detected NPs
+    az_nps_rad = np.where(zd_nps>0,0, np.pi) # Azimuths of detected NPs (rad)
+    az_nps_deg = np.where(zd_nps>0,0, 180)   # Azimuths of detected NPs (deg)
+    zd_nps = np.absolute(zd_nps)             # Zenith distances of NPs (deg)
+    mu_nps = np.cos(np.deg2rad(zd_nps))
+
+
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(15, 9))
-    fig.suptitle(r'Interpolations for $\mu_0$ = %.2f, $\tau$ = %.2f, A = %.2f. The red dot shows the location of the Sun.' % (mu0, tau, albedo) , fontsize=14)
+    fig.suptitle(r'Interpolations for $(\mu_0, \tau, A)=$ (%.2f, %.2f, %.2f).'\
+                 ' The red/white dots show the location of the Sun/neutral points.' % (mu0, tau, albedo) , fontsize=14)
 
     ax = axs[0, 0]
-    c = ax.pcolor(X, Y, I, cmap='RdBu')
+    c = ax.pcolor(X, Y, I, cmap='plasma')
     ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
     ax.set_title('I')
     ax.set_xlabel(r'$\phi$')
     ax.set_ylabel(r'$\mu$')
     fig.colorbar(c, ax=ax)
 
     ax = axs[0, 1]
-    c = ax.pcolor(X, Y, Q, cmap='RdBu')
+    c = ax.pcolor(X, Y, Q, cmap='plasma')
     ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
     ax.set_title('Q')
     ax.set_xlabel(r'$\phi$')
     ax.set_ylabel(r'$\mu$')
     fig.colorbar(c, ax=ax)
 
     ax = axs[0, 2]
-    c = ax.pcolor(X, Y, U, cmap='RdBu')
+    c = ax.pcolor(X, Y, U, cmap='plasma')
     ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
     ax.set_title('U')
     ax.set_xlabel(r'$\phi$')
     ax.set_ylabel(r'$\mu$')
     fig.colorbar(c, ax=ax)
-
-    zdsun = np.rad2deg( np.arccos(mu0) )
-    zdArr = np.rad2deg( np.arccos(muArr) )
-    meridian_solar = DoLP[:,0]
-    meridian_antisolar = DoLP[:,-1]
 
     ax = axs[1, 0]
     ax.set_xlabel("Zenith distance in solar/antisolar direction in green/blue. \
@@ -340,11 +439,28 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
     ax.plot(zdArr, meridian_solar, 'g-')
     ax.plot(-zdArr, meridian_antisolar, 'b-')
     ax.axvline(zdsun, color ='r')
+    
+
+    for ii in range(3):
+        if neutral_pts[ii] !=-999:
+            ax.axvline(neutral_pts[ii], color='k', linestyle='dotted')
+
+    if neutral_pts[0] !=-999:
+        ax.text(neutral_pts[0]+3, 15, 'Arago',    rotation=90,
+                rotation_mode='anchor', backgroundcolor='w')
+    if neutral_pts[1] !=-999:
+        ax.text(neutral_pts[1]+3, 15, 'Babinet',  rotation=90, 
+                rotation_mode='anchor', backgroundcolor='w')
+    if neutral_pts[2] !=-999:
+        ax.text(neutral_pts[2]+3, 15, 'Brewster', rotation=90,
+                rotation_mode='anchor', backgroundcolor='w')
+   
     ax.grid()
 
     ax = axs[1, 1]
     c = ax.pcolor(X, Y, DoLP)
     ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
     ax.set_title('DoLP')
     ax.set_xlabel(r'$\phi$')
     ax.set_ylabel(r'$\mu$')
@@ -362,7 +478,8 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
     th, r = np.meshgrid(azm, rad)
     ax.pcolormesh(th, r, DoLP)
     ax.pcolormesh(-th, r, DoLP)
-    ax.plot([0],[zdsun], 'ro', markersize=10)
+    ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
+    ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
     ax.grid()
 
     fig.tight_layout(pad=1.0)
@@ -416,18 +533,29 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
 
     plt_title = r'DoLP map for (elevation, azimuth, $\tau$, albedo) = (%.1f, %.1f, %.2f, %.2f)' \
                  % (el, az, tau, albedo)
-    plt_title = plt_title + '\n Light source as red point. Neutral points TBD.'
+    plt_title = plt_title + \
+        '\n Light source as red point. Neutral points in white.'
     fig = plt.figure(figsize=(9, 9))
     fig.suptitle(plt_title , fontsize=12)
 
     ax = fig.add_subplot(projection='polar')
     
-    zdsun = 90 - el    
+    zdsun = 90 - el
+    mu0 = np.cos(np.deg2rad(zdsun))
+    zdArr = np.rad2deg( np.arccos(muArr) )
+    
+    # Get locations of neutral points
+    neutral_pts = locate_neutral_points (mu0, muArr, DoLP)
+    zd_nps = neutral_pts[neutral_pts > -999] # Select only detected NPs
+    az_nps_rad = np.where(zd_nps>0,0, np.pi) # Azimuths of detected NPs (rad)
+    zd_nps = np.absolute(zd_nps)             # Zenith distances of NPs (deg)
+
+    
     azm = np.deg2rad(phiArr)
-    rad = np.rad2deg( np.arccos(muArr) )
-    th, r = np.meshgrid(azm, rad)
+    th, r = np.meshgrid(azm, zdArr)
     to_az = np.pi/2 + np.deg2rad(az)   # Rotate to appropriate azimuth
     ax.plot([to_az],[zdsun], 'ro', markersize=10)
+    ax.plot(to_az + az_nps_rad, zd_nps, 'wo', markersize=5)
     ax.pcolormesh(to_az - th, r, DoLP, vmin=0, vmax=100)
     c = ax.pcolormesh(to_az + th, r, DoLP, vmin=0, vmax=100)
 
@@ -448,6 +576,5 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
     plt.close()
     
     return 0
-
 #######################################################################
 
