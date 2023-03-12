@@ -205,7 +205,7 @@ def locate_neutral_points (mu0, muArr, DoLP):
     '''
     Search for neutral points (NP) in the sky.
     NOTE: Erroneous results for ZD~<25 deg, i.e. mu>0.9? Return that
-    no neutral points founds if mu>0.1 !!!
+    no neutral points founds if mu>0.9 !!!
 
     Parameters
     ----------
