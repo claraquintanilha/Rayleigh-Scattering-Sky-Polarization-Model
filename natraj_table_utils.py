@@ -125,10 +125,8 @@ def ReadTableLoadRefinedGrid (my_tau, my_alb, nRefine, points_list):
         
     Returns
     -------
-    Three 3D arrays I3refined, Q3refined, U3refined. The three dimensions of 
-    each of these arrays are mu0 (7 values), mu (nRefine values), and phi 
-    (also nRefine values). Therefore each of these 3D arrays contain
-    7 x nRefine x nRefine elements.
+    Lists of interpolated values of I/Q/U/DoLP at the locations defined 
+    in points_list.
     '''
     
     # Refined mu-phi grid at each tabulated mu0, and set the 2D 
@@ -230,7 +228,7 @@ def locate_neutral_points (mu0, muArr, DoLP):
     
     zd_np = np.full(3,-999, dtype=float)   # Array to store NPs.
     
-    if mu0 > 0.9:       # See NOTE above
+    if mu0 > 0.90:       # See NOTE above
         print('Source too close to zenith. No good neutral points.')
         return zd_np
     
@@ -283,6 +281,34 @@ def locate_neutral_points (mu0, muArr, DoLP):
         zd_np[1] = zdMin
 
     return zd_np
+#######################################################################
+
+
+#######################################################################
+def find_dolp (az0, el0, az, el, tau, albedo, npts):
+    '''
+    Given the azimuth and elevation of the light source (az0, el0), and
+    the azimuth and elevation of the viewing direction (az, el), along 
+    with the mesh refinement parameter npts, estimate the percent DoLP
+    at the viewing location based on the tables in Natraj et al. (2009).
+    '''
+
+    # Convert the elevations into mu-s
+    mu0 = np.cos( np.deg2rad(90-el0) )
+    mu  = np.cos( np.deg2rad(90-el ) )
+
+    # Compute relative azimuth of viewing direction w.r.t. light source
+    rel_az = np.absolute(az - az0)
+    if rel_az > 180:
+        rel_az = 360 - rel_az
+
+    pt_list = np.array([mu0, mu, rel_az])
+    
+    # Get the I/Q/U/DoLP value at the location in pt_list
+    I, Q, U, DoLP = ReadTableLoadRefinedGrid (tau, albedo, npts, pt_list)
+
+    return DoLP[0]
+
 #######################################################################
 
 
@@ -440,21 +466,23 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
     ax.plot(-zdArr, meridian_antisolar, 'b-')
     ax.axvline(zdsun, color ='r')
     
+    #ax.set(xlim =(-10, zdsun+10), ylim=(-2, 10)) # Uncomment to zoom near Sun
+    ymin, ymax = ax.get_ylim()
+    tpos = ymax - 0.3*(ymax-ymin)
 
     for ii in range(3):
         if neutral_pts[ii] !=-999:
             ax.axvline(neutral_pts[ii], color='k', linestyle='dotted')
 
     if neutral_pts[0] !=-999:
-        ax.text(neutral_pts[0]+3, 15, 'Arago',    rotation=90,
-                rotation_mode='anchor', backgroundcolor='w')
+        ax.text(neutral_pts[0], tpos, 'Arago',    rotation=90,
+                rotation_mode='anchor')
     if neutral_pts[1] !=-999:
-        ax.text(neutral_pts[1]+3, 15, 'Babinet',  rotation=90, 
-                rotation_mode='anchor', backgroundcolor='w')
+        ax.text(neutral_pts[1], tpos, 'Babinet',  rotation=90, 
+                rotation_mode='anchor')
     if neutral_pts[2] !=-999:
-        ax.text(neutral_pts[2]+3, 15, 'Brewster', rotation=90,
-                rotation_mode='anchor', backgroundcolor='w')
-   
+        ax.text(neutral_pts[2], tpos, 'Brewster', rotation=90,
+                rotation_mode='anchor')
     ax.grid()
 
     ax = axs[1, 1]

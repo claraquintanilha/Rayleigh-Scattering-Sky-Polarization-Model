@@ -11,10 +11,10 @@ my_tau = 0.1
 my_alb = 0.25
 
 # Input mu0 (my_mu0) has to be within 0.1 <= my_mu0 <= 1 
-my_mu0 = np.cos (np.deg2rad(26))
+my_mu0 = np.cos (np.deg2rad(46))
 
 # Regrid the mu and phi grids so that each have nNew grid points
-nNew = 299
+nNew = 499
 muNew = np.linspace( nt.mu[0],  nt.mu[-1], nNew)
 phiNew = np.linspace( nt.phi[0],  nt.phi[-1], nNew)
 
